@@ -53,8 +53,10 @@ pub async fn start_gossip_loop(app: AppState) -> eyre::Result<()> {
             let dirty = app.dirty();
 
             let dirty_ids: Vec<NodeId> = {
-                let dirty = dirty.lock().await;
-                dirty.iter().cloned().collect()
+                let mut dirty = dirty.lock().await;
+                let ids = dirty.iter().cloned().collect();
+                dirty.clear();
+                ids
             };
 
             let mut diffs = HashMap::new();
@@ -64,9 +66,9 @@ pub async fn start_gossip_loop(app: AppState) -> eyre::Result<()> {
                 }
             }
 
-            {
-                let mut dirty = dirty.lock().await;
-                dirty.clear();
+            if diffs.is_empty() {
+                trace!("No dirty nodes to gossip");
+                continue;
             }
 
             let from = app.id().clone();
