@@ -1,6 +1,9 @@
 use crate::app::AppState;
 use crate::node::{NodeId, NodeState};
 use axum::{Json, extract::State};
+use rand::SeedableRng;
+use rand::prelude::IndexedRandom;
+use rand::rngs::SmallRng;
 use serde::{Deserialize, Serialize};
 use std::{self, collections::HashMap, time::Duration};
 use tokio::time::interval;
@@ -66,21 +69,26 @@ pub async fn start_gossip_loop(app: AppState) -> eyre::Result<()> {
                 }
             }
 
-            if diffs.is_empty() {
-                trace!("No dirty nodes to gossip");
-                continue;
-            }
-
             let from = app.id().clone();
             GossipPayload { from, diffs }
         };
 
-        for (fullname, node_state) in payload.diffs.iter() {
-            if *fullname == my_fullname {
-                trace!("Skipping self: {}", fullname);
-                continue;
-            }
+        if payload.diffs.is_empty() {
+            trace!("No diffs to gossip");
+            continue;
+        }
 
+        let mut rng = SmallRng::from_os_rng();
+
+        let peer_choices: Vec<_> = payload
+            .diffs
+            .iter()
+            .filter(|(fullname, _)| **fullname != my_fullname)
+            .collect();
+
+        let sample = peer_choices.choose_multiple(&mut rng, 3);
+
+        for (fullname, node_state) in sample {
             let peer = node_state.address().to_string();
             let peer_url = format!("http://{}/gossip", peer);
             debug!("Gossiping to: {} at {}", fullname, peer);
