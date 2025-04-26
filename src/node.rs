@@ -29,20 +29,18 @@ impl From<NodeId> for String {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct NodeState {
     id: NodeId,
     last_seen: u64,
-    load: f32,
     address: SocketAddr,
 }
 
 impl NodeState {
-    pub fn new(id: NodeId, last_seen: u64, load: f32, address: SocketAddr) -> Self {
+    pub fn new(id: NodeId, last_seen: u64, address: SocketAddr) -> Self {
         Self {
             id,
             last_seen,
-            load,
             address,
         }
     }
@@ -74,9 +72,5 @@ impl NodeState {
 
     pub fn set_last_seen(&mut self, last_seen: u64) {
         self.last_seen = last_seen;
-    }
-
-    pub fn load(&self) -> f32 {
-        self.load
     }
 }

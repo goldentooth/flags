@@ -80,9 +80,15 @@ impl AppState {
     }
 
     pub async fn add_node(&self, id: NodeId, node_state: NodeState) {
+        let mut is_dirty = true;
+        if let Some(existing) = self.nodes.get(&id) {
+            is_dirty = existing.value() != &node_state;
+        }
         self.nodes.insert(id.clone(), node_state);
-        let mut dirty = self.dirty.lock().await;
-        dirty.insert(id);
+        if is_dirty {
+            let mut dirty = self.dirty.lock().await;
+            dirty.insert(id);
+        }
     }
 
     pub async fn remove_node(&self, id: &NodeId) {

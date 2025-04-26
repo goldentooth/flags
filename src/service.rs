@@ -85,7 +85,7 @@ impl Service {
                             {
                                 let port = service_info.get_port();
                                 let addr = SocketAddr::new((*ip).into(), port);
-                                let node_state = NodeState::new(id.clone().into(), 0, 0.0, addr);
+                                let node_state = NodeState::new(id.clone().into(), 0, addr);
                                 debug!("Adding peer: {} at {}", id, addr);
                                 state.add_node(id.into(), node_state).await;
                             } else {
