@@ -93,7 +93,7 @@ async fn main() -> eyre::Result<()> {
     let state = AppState::new(config.id.clone(), service_info, service_daemon);
 
     debug!("Starting node service...");
-    let mut service = Service::new(state);
+    let mut service = Service::new(state.clone());
     debug!("Starting listening...");
     let _listener = service.listen(listener).await?;
     debug!("Registering service...");
@@ -115,6 +115,7 @@ async fn main() -> eyre::Result<()> {
 
     notify.notified().await;
     debug!("Shutting down...");
+    state.service_daemon().shutdown()?;
     debug!("Stopping registrar...");
     _registrar.abort();
     debug!("Stopping whisperer...");
