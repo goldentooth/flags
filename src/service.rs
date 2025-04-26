@@ -3,7 +3,11 @@ use crate::gossip;
 use crate::node::{NodeId, NodeState};
 use axum::{Router, routing::post};
 use mdns_sd::ServiceEvent;
-use std::{self, net::SocketAddr};
+use std::{
+    self,
+    net::SocketAddr,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use tokio::{net::TcpListener, task::JoinHandle};
 use tracing::{debug, error, info, instrument};
 
@@ -85,7 +89,11 @@ impl Service {
                             {
                                 let port = service_info.get_port();
                                 let addr = SocketAddr::new((*ip).into(), port);
-                                let node_state = NodeState::new(id.clone().into(), 0, addr);
+                                let last_seen = SystemTime::now()
+                                    .duration_since(UNIX_EPOCH)
+                                    .expect("Time went backwards");
+                                let node_state =
+                                    NodeState::new(id.clone().into(), last_seen.as_secs(), addr);
                                 debug!("Adding peer: {} at {}", id, addr);
                                 state.add_node(id.into(), node_state).await;
                             } else {
