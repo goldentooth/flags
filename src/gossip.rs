@@ -2,7 +2,6 @@ use crate::app::AppState;
 use crate::node::{NodeId, NodeState};
 use axum::{Json, extract::State};
 use serde::{Deserialize, Serialize};
-use std::time::{SystemTime, UNIX_EPOCH};
 use std::{self, collections::HashMap, time::Duration};
 use tokio::time::interval;
 use tracing::{debug, error, info, instrument, trace};
@@ -36,28 +35,6 @@ pub async fn gossip_handler(
     }
 
     "ok"
-}
-
-#[instrument]
-pub async fn update_local_state(app: &AppState) -> eyre::Result<()> {
-    let address = app.address()?;
-    let nodes = app.nodes();
-    let last_seen = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    let load = compute_load_estimate();
-    let id = app.id().clone();
-    let node_state = NodeState::new(id.clone(), last_seen, load, address);
-
-    nodes.insert(id, node_state);
-
-    Ok(())
-}
-
-#[instrument]
-pub fn compute_load_estimate() -> f32 {
-    rand::random::<f32>()
 }
 
 #[instrument]
