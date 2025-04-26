@@ -1,5 +1,5 @@
 use mdns_sd::{ServiceDaemon, ServiceInfo};
-use tokio_util::sync::CancellationToken; // for Receiver::next()
+use tokio_util::sync::CancellationToken;
 
 pub async fn register_service(
   daemon: &ServiceDaemon,

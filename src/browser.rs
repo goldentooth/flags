@@ -116,7 +116,7 @@ pub async fn browse_loop(
   let receiver = service_daemon.browse(&service_type)?;
   loop {
     tokio::select! {
-        biased; // prefer cancel first if available
+        biased;
         _ = cancel_token.cancelled() => {
             debug!("Browse task received shutdown signal");
             service_daemon.stop_browse(service_type)?;

@@ -94,7 +94,6 @@ async fn main() -> eyre::Result<()> {
     })
     .await;
 
-  // Ctrl-C task
   shutdown
     .spawn("ctrl_c", {
       let shutdown = shutdown.clone();
