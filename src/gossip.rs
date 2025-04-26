@@ -47,7 +47,7 @@ pub async fn start_gossip_loop(app: AppState) -> eyre::Result<()> {
     let service_info = app.service_info();
     let my_fullname: NodeId = service_info.get_fullname().to_string().into();
     info!("Starting gossip loop...");
-
+    let mut counter: u64 = 0;
     loop {
         interval.tick().await;
 
@@ -55,6 +55,7 @@ pub async fn start_gossip_loop(app: AppState) -> eyre::Result<()> {
             let nodes = app.nodes();
             let dirty = app.dirty();
 
+            let full_sync = counter % 10 == 0;
             let dirty_ids: Vec<NodeId> = {
                 let mut dirty = dirty.lock().await;
                 let ids = dirty.iter().cloned().collect();
@@ -62,12 +63,20 @@ pub async fn start_gossip_loop(app: AppState) -> eyre::Result<()> {
                 ids
             };
 
-            let mut diffs = HashMap::new();
-            for id in dirty_ids.iter() {
-                if let Some(node_state) = nodes.get(id) {
-                    diffs.insert(id.clone(), node_state.value().clone());
+            let diffs = if full_sync {
+                nodes
+                    .iter()
+                    .map(|entry| (entry.key().clone(), entry.value().clone()))
+                    .collect()
+            } else {
+                let mut diffs = HashMap::new();
+                for id in dirty_ids.iter() {
+                    if let Some(node_state) = nodes.get(id) {
+                        diffs.insert(id.clone(), node_state.value().clone());
+                    }
                 }
-            }
+                diffs
+            };
 
             let from = app.id().clone();
             GossipPayload { from, diffs }
@@ -108,5 +117,6 @@ pub async fn start_gossip_loop(app: AppState) -> eyre::Result<()> {
                 error!("Failed to send gossip to {}: {:?}", peer, err);
             }
         }
+        counter += 1;
     }
 }
