@@ -30,14 +30,11 @@ pub async fn gossip_listen(
     .with_graceful_shutdown(shutdown_signal(cancel_token))
     .await
     .unwrap();
-  println!("Gossip listener shutdown");
   Ok(())
 }
 
 async fn shutdown_signal(cancel_token: CancellationToken) {
-  println!("Waiting for shutdown signal...");
   cancel_token.cancelled().await;
-  println!("Shutdown signal received!");
 }
 
 #[instrument]

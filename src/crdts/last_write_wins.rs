@@ -105,6 +105,19 @@ where
     mem::take(&mut *dirty)
   }
 
+  #[allow(dead_code)]
+  pub async fn take_dirty_batch(&self, count: usize) -> HashSet<K> {
+    let mut dirty = self.dirty.lock().await;
+    let mut taken = HashSet::with_capacity(count.min(dirty.len()));
+
+    for key in dirty.iter().take(count).cloned().collect::<Vec<_>>() {
+      dirty.remove(&key);
+      taken.insert(key);
+    }
+
+    taken
+  }
+
   pub fn get(&self, key: &K) -> Option<V> {
     self.map.get(key)
   }

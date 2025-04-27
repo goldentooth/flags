@@ -1,5 +1,6 @@
 use args::parse_args;
 use config::build_config;
+use gossip::GossipState;
 use mdns_sd::ServiceDaemon;
 use reqwest::ClientBuilder;
 use shutdown::ShutdownManager;
@@ -29,84 +30,71 @@ async fn main() -> eyre::Result<()> {
   }
 
   let args = parse_args()?;
-
   let (config, listener) = build_config(args).await?;
-
   let shutdown = ShutdownManager::new();
-  println!("Is shutdown: {}", shutdown.is_shutdown());
   let service_daemon = ServiceDaemon::new()?;
-  let gossip_state = gossip::GossipState::new(&config.id);
-  let cancel_token = shutdown.cancel_token();
+  let gossip_state = GossipState::new(&config.id);
 
-  shutdown
-    .spawn("browse", {
-      let gossip_state = gossip_state.clone();
-      let service_daemon = service_daemon.clone();
-      let domain = config.domain.clone();
-      async move {
-        browser::browse_loop(gossip_state, &service_daemon, &domain, cancel_token)
-          .await
-          .unwrap();
-      }
-    })
-    .await;
+  {
+    let gossip_state = gossip_state.clone();
+    let service_daemon = service_daemon.clone();
+    let domain = config.domain.clone();
+    shutdown
+      .spawn_guarded("browse_services", move |cancel_token| async move {
+        browser::browse_loop(gossip_state, &service_daemon, &domain, cancel_token).await
+      })
+      .await;
+  }
 
-  let cancel_token = shutdown.cancel_token();
-  shutdown
-    .spawn("register_service", {
-      let service_daemon = service_daemon.clone();
-      let service_info = config.service_info()?;
-      async move {
-        register::register_service(&service_daemon, service_info, cancel_token)
-          .await
-          .expect("Failed to register service");
-      }
-    })
-    .await;
+  {
+    let service_daemon = service_daemon.clone();
+    let service_info = config.service_info()?;
+    shutdown
+      .spawn_guarded("register_service", move |cancel_token| async move {
+        register::register_service(&service_daemon, service_info, cancel_token).await
+      })
+      .await;
+  }
 
-  let cancel_token = shutdown.cancel_token();
-  shutdown
-    .spawn("gossip_listener", {
-      let gossip_state = gossip_state.clone();
-      async move {
-        listener::gossip_listen(gossip_state, listener, cancel_token)
-          .await
-          .expect("Failed to start gossip listener");
-      }
-    })
-    .await;
+  {
+    let gossip_state = gossip_state.clone();
+    shutdown
+      .spawn_guarded("gossip_listener", move |cancel_token| async move {
+        listener::gossip_listen(gossip_state, listener, cancel_token).await
+      })
+      .await;
+  }
 
-  let cancel_token = shutdown.cancel_token();
-  shutdown
-    .spawn("gossip_whisper", {
-      let gossip_state = gossip_state.clone();
-      let client = ClientBuilder::new()
-        .timeout(Duration::from_secs(5))
-        .connect_timeout(Duration::from_secs(1))
-        .pool_idle_timeout(Duration::from_secs(1))
-        .pool_max_idle_per_host(0)
-        .http2_keep_alive_interval(None)
-        .tcp_keepalive(None)
-        .build()
-        .expect("Failed to create HTTP client");
-      async move {
-        whisperer::gossip_whisper(&client, gossip_state, cancel_token)
-          .await
-          .expect("Failed to start gossip whisperer");
-      }
-    })
-    .await;
+  {
+    let gossip_state = gossip_state.clone();
+    let client = ClientBuilder::new()
+      .timeout(Duration::from_secs(5))
+      .connect_timeout(Duration::from_secs(1))
+      .pool_idle_timeout(Duration::from_secs(1))
+      .pool_max_idle_per_host(0)
+      .http2_keep_alive_interval(None)
+      .tcp_keepalive(None)
+      .build()
+      .expect("Failed to create HTTP client");
+    shutdown
+      .spawn_guarded("gossip_whisper", move |cancel_token| async move {
+        whisperer::gossip_whisper(&client, gossip_state, cancel_token).await
+      })
+      .await;
+  }
 
-  let shutdown_clone = shutdown.clone();
-  shutdown
-    .spawn("ctrl_c", {
-      async move {
-        signal::ctrl_c().await.expect("failed to listen for event");
-        info!("Ctrl-C pressed, shutting down...");
-        shutdown_clone.cancel();
-      }
-    })
-    .await;
+  {
+    shutdown
+      .spawn("ctrl_c", {
+        let shutdown = shutdown.clone();
+        async move {
+          signal::ctrl_c().await.expect("failed to listen for event");
+          info!("Ctrl-C pressed, shutting down...");
+          shutdown.cancel();
+        }
+      })
+      .await;
+  }
 
   shutdown.shutdown().await;
   info!("Shutdown complete");

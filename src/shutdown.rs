@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::{sync::Mutex, task::JoinHandle, time};
 use tokio_util::sync::CancellationToken;
-use tracing::{info, trace};
+use tracing::{error, info, trace};
 
 #[derive(Clone)]
 pub struct ShutdownManager {
@@ -24,10 +24,6 @@ impl ShutdownManager {
     self.cancel_token.clone()
   }
 
-  pub fn is_shutdown(&self) -> bool {
-    self.cancel_token.is_cancelled()
-  }
-
   pub fn cancel(&self) {
     self.cancel_token.cancel();
   }
@@ -40,6 +36,23 @@ impl ShutdownManager {
     let mut tasks = self.tasks.lock().await;
     let name = name.to_string();
     tasks.insert(name.to_string(), task);
+  }
+
+  pub async fn spawn_guarded<F, Fut>(&self, name: &'static str, fut: F)
+  where
+    F: FnOnce(CancellationToken) -> Fut + Send + 'static,
+    Fut: Future<Output = eyre::Result<()>> + Send + 'static,
+  {
+    let cancel_token = self.cancel_token();
+    let cancel_token2 = self.cancel_token();
+    self
+      .spawn(name, async move {
+        if let Err(error) = fut(cancel_token).await {
+          error!("{} failed: {}", name, error);
+          cancel_token2.cancel();
+        }
+      })
+      .await;
   }
 
   pub async fn shutdown(self) {
