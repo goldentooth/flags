@@ -7,6 +7,11 @@ use mdns_sd::{ServiceDaemon, ServiceInfo};
 use reqwest::Client;
 use tokio_util::sync::CancellationToken;
 
+pub type ShutdownTaskReturn = BoxFuture<'static, eyre::Result<()>>;
+pub type ShutdownTaskFn =
+  dyn FnOnce(CancellationToken, ShutdownContainer) -> ShutdownTaskReturn + Send;
+pub type ShutdownTask = Box<ShutdownTaskFn>;
+
 #[derive(Clone, Derivative)]
 #[derivative(Debug)]
 pub struct ShutdownContainer {
@@ -40,13 +45,7 @@ impl ShutdownContainer {
     shutdown: &ShutdownManager,
     listener: tokio::net::TcpListener,
   ) {
-    let tasks: Vec<(
-      &'static str,
-      Box<
-        dyn FnOnce(CancellationToken, ShutdownContainer) -> BoxFuture<'static, eyre::Result<()>>
-          + Send,
-      >,
-    )> = vec![
+    let tasks: Vec<(&'static str, ShutdownTask)> = vec![
       (
         "browse_services",
         Box::new(|cancel, container| {

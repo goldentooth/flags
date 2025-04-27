@@ -2,9 +2,25 @@ use super::crdts::last_write_wins::LastWriteWins;
 use serde::{Deserialize, Serialize};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tracing::instrument;
+use uuid::Uuid;
 
 #[derive(PartialEq, Eq, Hash, Debug, Clone, Serialize, Deserialize)]
 pub struct NodeId(String);
+
+impl NodeId {
+  pub fn new_random() -> Self {
+    let id = Uuid::new_v4().to_string();
+    Self(id)
+  }
+
+  pub fn new(id: &str) -> Self {
+    Self(id.to_string())
+  }
+
+  pub fn as_str(&self) -> &str {
+    &self.0
+  }
+}
 
 impl From<String> for NodeId {
   fn from(id: String) -> Self {

@@ -112,7 +112,7 @@ pub async fn gossip_whisper(
       }
       _ = interval.tick() => {
         trace!("Gossip tick");
-        if let Err(error) = gossip_tick(&client, &app).await {
+        if let Err(error) = gossip_tick(client, &app).await {
           trace!("Error in gossip tick: {}", error);
           continue;
         }

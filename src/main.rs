@@ -1,18 +1,12 @@
-use args::parse_args;
-use config::build_config;
-use gossip::GossipState;
-use mdns_sd::ServiceDaemon;
-use reqwest::ClientBuilder;
-use shutdown::{container::ShutdownContainer, manager::ShutdownManager};
-use std::time::Duration;
+use init::args::ArgsStage;
+use shutdown::manager::ShutdownManager;
 use tokio::signal;
 use tracing::{info, instrument};
 
-mod args;
 mod browser;
-mod config;
 mod crdts;
 mod gossip;
+mod init;
 mod listener;
 mod log;
 mod node;
@@ -29,26 +23,14 @@ async fn main() -> eyre::Result<()> {
     console_subscriber::init();
   }
 
-  let args = parse_args()?;
-  let (config, listener) = build_config(args).await?;
   let shutdown = ShutdownManager::new();
-  let container = {
-    let gossip_state = GossipState::new(&config.id);
-    let service_daemon = ServiceDaemon::new()?;
-    let domain = config.domain.clone();
-    let service_info = config.service_info()?;
-    let client = ClientBuilder::new()
-      .timeout(Duration::from_secs(5))
-      .connect_timeout(Duration::from_secs(1))
-      .pool_idle_timeout(Duration::from_secs(1))
-      .pool_max_idle_per_host(0)
-      .http2_keep_alive_interval(None)
-      .tcp_keepalive(None)
-      .build()
-      .expect("Failed to create HTTP client");
-    ShutdownContainer::new(gossip_state, service_daemon, domain, service_info, client)
-  };
-
+  let (container, listener) = ArgsStage::parse()?
+    .bind_socket()?
+    .bind()
+    .await?
+    .generate_id()
+    .build()?
+    .finalize();
   container.register_tasks(&shutdown, listener).await;
 
   shutdown
