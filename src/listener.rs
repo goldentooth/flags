@@ -48,7 +48,7 @@ pub async fn gossip_handler(
   let nodes = app.nodes();
   debug!("Received gossip from: {}", payload.from);
   for (key, incoming) in payload.diffs {
-    nodes.insert(key, incoming);
+    nodes.insert(key, incoming).await;
   }
   "ok"
 }

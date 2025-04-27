@@ -1,7 +1,7 @@
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
-use std::hash::Hash;
-use std::sync::Arc;
+use std::{collections::HashSet, hash::Hash, mem, sync::Arc};
+use tokio::sync::Mutex;
 
 pub trait LastWriteWins {
   fn is_newer_than(&self, other: &Self) -> bool;
@@ -54,5 +54,62 @@ where
       .iter()
       .map(|entry| (entry.key().clone(), entry.value().clone()))
       .collect()
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct TrackedLwwMap<K, V>
+where
+  K: Eq + Hash,
+{
+  map: LwwMap<K, V>,
+  dirty: Arc<Mutex<HashSet<K>>>,
+}
+
+impl<K, V> TrackedLwwMap<K, V>
+where
+  K: Eq + Hash + Clone,
+  V: Clone + LastWriteWins,
+{
+  pub fn new() -> Self {
+    Self {
+      map: LwwMap::new(),
+      dirty: Arc::new(Mutex::new(HashSet::new())),
+    }
+  }
+
+  pub async fn insert(&self, key: K, value: V) {
+    let changed = {
+      let current = self.map.get(&key);
+      match current {
+        Some(existing) => value.is_newer_than(&existing),
+        None => true,
+      }
+    };
+
+    if changed {
+      self.map.insert(key.clone(), value);
+      let mut dirty = self.dirty.lock().await;
+      dirty.insert(key);
+    }
+  }
+
+  pub async fn remove(&self, key: &K) {
+    self.map.remove(key);
+    let mut dirty = self.dirty.lock().await;
+    dirty.insert(key.clone());
+  }
+
+  pub async fn take_dirty(&self) -> HashSet<K> {
+    let mut dirty = self.dirty.lock().await;
+    mem::take(&mut *dirty)
+  }
+
+  pub fn get(&self, key: &K) -> Option<V> {
+    self.map.get(key)
+  }
+
+  pub fn iter(&self) -> Vec<(K, V)> {
+    self.map.iter()
   }
 }

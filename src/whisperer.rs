@@ -24,28 +24,15 @@ pub async fn is_node_healthy(client: &Client, target_addr: &str) -> bool {
 }
 
 #[instrument]
-pub async fn build_gossip_payload(app: &GossipState, full_sync: bool) -> GossipPayload {
-  let nodes = app.nodes();
-  let diffs = if full_sync {
-    nodes.iter()
-  } else {
-    let dirty_ids: Vec<NodeId> = {
-      let dirty = app.dirty();
-      let mut dirty = dirty.lock().await;
-      let ids = dirty.iter().cloned().collect();
-      dirty.clear();
-      ids
-    };
-    let mut diffs = Vec::new();
-    for id in dirty_ids.iter() {
-      if let Some(node_state) = nodes.get(id) {
-        diffs.push((id.clone(), node_state.clone()));
-      }
-    }
-    diffs
-  };
+pub async fn build_gossip_payload(state: &GossipState) -> GossipPayload {
+  let dirty_keys = state.nodes().take_dirty().await;
+  let diffs: Vec<_> = dirty_keys
+    .into_iter()
+    .filter_map(|id| state.nodes().get(&id).map(|v| (id, v)))
+    .collect();
+
   GossipPayload {
-    from: app.id().clone(),
+    from: state.id().clone(),
     diffs,
   }
 }
@@ -83,9 +70,9 @@ async fn send_gossip(
 }
 
 #[instrument]
-pub async fn gossip_tick(client: &Client, app: &GossipState, full_sync: bool) -> eyre::Result<()> {
+pub async fn gossip_tick(client: &Client, app: &GossipState) -> eyre::Result<()> {
   {
-    let payload = build_gossip_payload(&app, full_sync).await;
+    let payload = build_gossip_payload(&app).await;
     if payload.diffs.is_empty() {
       eyre::bail!("No gossip to send");
     }
@@ -119,10 +106,7 @@ pub async fn gossip_whisper(
 ) -> eyre::Result<()> {
   let mut interval = interval(Duration::from_secs(5));
   info!("Starting gossip loop...");
-  let mut counter: u64 = 0;
   loop {
-    let full_sync = counter % 10 == 0;
-
     tokio::select! {
       biased;
       _ = cancel.cancelled() => {
@@ -131,13 +115,11 @@ pub async fn gossip_whisper(
       }
       _ = interval.tick() => {
         trace!("Gossip tick");
-        if let Err(error) = gossip_tick(&client, &app, full_sync).await {
+        if let Err(error) = gossip_tick(&client, &app).await {
           trace!("Error in gossip tick: {}", error);
           continue;
         }
       }
     }
-
-    counter += 1;
   }
 }
