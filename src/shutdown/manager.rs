@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::{sync::Mutex, task::JoinHandle, time};
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info, trace};
+use tracing::{debug, error, info, trace};
 
 #[derive(Clone)]
 pub struct ShutdownManager {
@@ -75,8 +75,8 @@ impl ShutdownManager {
     info!("Waiting for tasks to complete...");
     for (name, mut task) in tasks.drain() {
       if let Err(error) = time::timeout(duration, &mut task).await {
-        trace!("Task {} failed to complete in time: {:?}", name, error);
-        trace!("Forcefully aborting task {}.", name);
+        debug!("Task {} failed to complete in time: {:?}", name, error);
+        debug!("Forcefully aborting task {}.", name);
         task.abort();
       } else {
         trace!("Task {} completed successfully.", name);

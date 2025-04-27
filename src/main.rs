@@ -49,10 +49,10 @@ async fn main() -> eyre::Result<()> {
     ShutdownContainer::new(gossip_state, service_daemon, domain, service_info, client)
   };
 
-  shutdown
-    .spawn_guarded(
+  container
+    .spawn(
+      &shutdown,
       "browse_services",
-      &container,
       move |cancel_token, container| async move {
         browser::browse_loop(
           container.gossip_state,
@@ -65,10 +65,10 @@ async fn main() -> eyre::Result<()> {
     )
     .await;
 
-  shutdown
-    .spawn_guarded(
+  container
+    .spawn(
+      &shutdown,
       "register_service",
-      &container,
       move |cancel_token, container| async move {
         register::register_service(
           &container.service_daemon,
@@ -80,20 +80,20 @@ async fn main() -> eyre::Result<()> {
     )
     .await;
 
-  shutdown
-    .spawn_guarded(
+  container
+    .spawn(
+      &shutdown,
       "gossip_listener",
-      &container,
       move |cancel_token, container| async move {
         listener::gossip_listen(container.gossip_state, listener, cancel_token).await
       },
     )
     .await;
 
-  shutdown
-    .spawn_guarded(
+  container
+    .spawn(
+      &shutdown,
       "gossip_whisper",
-      &container,
       move |cancel_token, container| async move {
         whisperer::gossip_whisper(&container.http_client, container.gossip_state, cancel_token)
           .await
