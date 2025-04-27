@@ -1,4 +1,5 @@
 use crate::gossip::{GossipPayload, GossipState};
+use crate::shutdown::container::ShutdownContainer;
 use axum::{Json, extract::State};
 use axum::{
   Router,
@@ -14,10 +15,11 @@ use tower_http::{timeout::TimeoutLayer, trace::TraceLayer};
 use tracing::{debug, instrument};
 
 pub async fn gossip_listen(
-  gossip_state: GossipState,
+  container: &ShutdownContainer,
   listener: TcpListener,
   cancel_token: CancellationToken,
 ) -> eyre::Result<()> {
+  let gossip_state = container.gossip_state.clone();
   let layer = ServiceBuilder::new()
     .layer(TraceLayer::new_for_http())
     .layer(TimeoutLayer::new(Duration::from_secs(5)));

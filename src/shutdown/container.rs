@@ -1,12 +1,15 @@
 use super::manager::ShutdownManager;
 use crate::gossip::GossipState;
+use derivative::Derivative;
 use mdns_sd::{ServiceDaemon, ServiceInfo};
 use reqwest::Client;
 use tokio_util::sync::CancellationToken;
 
-#[derive(Clone)]
+#[derive(Clone, Derivative)]
+#[derivative(Debug)]
 pub struct ShutdownContainer {
   pub gossip_state: GossipState,
+  #[derivative(Debug = "ignore")]
   pub service_daemon: ServiceDaemon,
   pub domain: String,
   pub service_info: ServiceInfo,

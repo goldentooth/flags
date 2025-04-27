@@ -1,6 +1,7 @@
 use crate::gossip::GossipState;
 use crate::node::{NodeId, NodeState};
-use mdns_sd::{IfKind, ServiceDaemon, ServiceEvent, ServiceInfo};
+use crate::shutdown::container::ShutdownContainer;
+use mdns_sd::{IfKind, ServiceEvent, ServiceInfo};
 use std::net::SocketAddr;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio_util::sync::CancellationToken;
@@ -106,14 +107,15 @@ impl ServiceInfoExt for ServiceInfo {
 }
 
 pub async fn browse_loop(
-  gossip_state: GossipState,
-  service_daemon: &ServiceDaemon,
-  service_type: &str,
+  container: &ShutdownContainer,
   cancel_token: CancellationToken,
 ) -> eyre::Result<()> {
+  let gossip_state = container.gossip_state.clone();
+  let service_daemon = &container.service_daemon;
+  let service_type = &container.domain;
   let mut delegate = BrowserDelegate::new(gossip_state);
   service_daemon.disable_interface(IfKind::IPv6)?;
-  let receiver = service_daemon.browse(&service_type)?;
+  let receiver = service_daemon.browse(service_type)?;
   loop {
     tokio::select! {
         biased;

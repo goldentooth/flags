@@ -1,18 +1,16 @@
-use mdns_sd::{ServiceDaemon, ServiceInfo};
+use crate::shutdown::container::ShutdownContainer;
 use tokio_util::sync::CancellationToken;
 
 pub async fn register_service(
-  daemon: &ServiceDaemon,
-  service_info: ServiceInfo,
+  container: &ShutdownContainer,
   cancel_token: CancellationToken,
 ) -> eyre::Result<()> {
+  let daemon = container.service_daemon.clone();
+  let service_info = container.service_info.clone();
   daemon.register(service_info)?;
-
   cancel_token.cancelled().await;
-
   let shutdown_rx = daemon.shutdown()?;
-
-  if let Some(status) = shutdown_rx.recv_async().await.ok() {
+  if let Ok(status) = shutdown_rx.recv_async().await {
     tracing::info!("mDNS daemon shutdown status: {:?}", status);
   } else {
     tracing::warn!("mDNS daemon shutdown receiver dropped early");

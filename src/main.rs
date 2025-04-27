@@ -55,9 +55,7 @@ async fn main() -> eyre::Result<()> {
       "browse_services",
       move |cancel_token, container| async move {
         browser::browse_loop(
-          container.gossip_state,
-          &container.service_daemon,
-          &container.domain,
+          &container,
           cancel_token,
         )
         .await
@@ -70,12 +68,7 @@ async fn main() -> eyre::Result<()> {
       &shutdown,
       "register_service",
       move |cancel_token, container| async move {
-        register::register_service(
-          &container.service_daemon,
-          container.service_info,
-          cancel_token,
-        )
-        .await
+        register::register_service(&container, cancel_token).await
       },
     )
     .await;
@@ -85,7 +78,7 @@ async fn main() -> eyre::Result<()> {
       &shutdown,
       "gossip_listener",
       move |cancel_token, container| async move {
-        listener::gossip_listen(container.gossip_state, listener, cancel_token).await
+        listener::gossip_listen(&container, listener, cancel_token).await
       },
     )
     .await;
@@ -95,8 +88,7 @@ async fn main() -> eyre::Result<()> {
       &shutdown,
       "gossip_whisper",
       move |cancel_token, container| async move {
-        whisperer::gossip_whisper(&container.http_client, container.gossip_state, cancel_token)
-          .await
+        whisperer::gossip_whisper(&container, cancel_token).await
       },
     )
     .await;

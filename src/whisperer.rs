@@ -1,5 +1,6 @@
 use crate::gossip::{GossipPayload, GossipState};
 use crate::node::NodeId;
+use crate::shutdown::container::ShutdownContainer;
 use rand::SeedableRng;
 use rand::prelude::IndexedRandom;
 use rand::rngs::SmallRng;
@@ -11,16 +12,11 @@ use tracing::{debug, info, instrument, trace};
 
 #[instrument]
 pub async fn is_node_healthy(client: &Client, target_addr: &str) -> bool {
-  let url = format!("http://{}/health", target_addr);
-  match client
-    .get(&url)
+  matches!(client
+    .get(format!("http://{}/health", target_addr))
     .timeout(Duration::from_secs(1))
     .send()
-    .await
-  {
-    Ok(resp) if resp.status().is_success() => true,
-    _ => false,
-  }
+    .await, Ok(resp) if resp.status().is_success())
 }
 
 #[instrument]
@@ -72,12 +68,12 @@ async fn send_gossip(
 #[instrument]
 pub async fn gossip_tick(client: &Client, app: &GossipState) -> eyre::Result<()> {
   {
-    let payload = build_gossip_payload(&app).await;
+    let payload = build_gossip_payload(app).await;
     if payload.diffs.is_empty() {
       eyre::bail!("No gossip to send");
     }
 
-    let targets = select_gossip_targets(&app, 3);
+    let targets = select_gossip_targets(app, 3);
     if targets.is_empty() {
       eyre::bail!("No gossip targets found");
     }
@@ -87,7 +83,7 @@ pub async fn gossip_tick(client: &Client, app: &GossipState) -> eyre::Result<()>
         eyre::bail!("Node {} is not healthy", id);
       }
 
-      send_gossip(&client, &address, &payload)
+      send_gossip(client, &address, &payload)
         .await
         .map_err(|error| {
           debug!("Failed to send gossip to {}: {} ({:?})", id, error, error);
@@ -100,10 +96,11 @@ pub async fn gossip_tick(client: &Client, app: &GossipState) -> eyre::Result<()>
 
 #[instrument]
 pub async fn gossip_whisper(
-  client: &Client,
-  app: GossipState,
+  container: &ShutdownContainer,
   cancel: CancellationToken,
 ) -> eyre::Result<()> {
+  let app = container.gossip_state.clone();
+  let client = &container.http_client;
   let mut interval = interval(Duration::from_secs(5));
   info!("Starting gossip loop...");
   loop {
