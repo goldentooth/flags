@@ -1,3 +1,4 @@
+use super::crdts::last_write_wins::LastWriteWins;
 use serde::{Deserialize, Serialize};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use tracing::instrument;
@@ -73,5 +74,11 @@ impl NodeState {
 
   pub fn set_last_seen(&mut self, last_seen: u64) {
     self.last_seen = last_seen;
+  }
+}
+
+impl LastWriteWins for NodeState {
+  fn is_newer_than(&self, other: &Self) -> bool {
+    self.last_seen > other.last_seen
   }
 }

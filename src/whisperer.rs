@@ -4,7 +4,7 @@ use rand::SeedableRng;
 use rand::prelude::IndexedRandom;
 use rand::rngs::SmallRng;
 use reqwest::Client;
-use std::{self, collections::HashMap, time::Duration};
+use std::{self, time::Duration};
 use tokio::time::interval;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, instrument, trace};
@@ -27,10 +27,7 @@ pub async fn is_node_healthy(client: &Client, target_addr: &str) -> bool {
 pub async fn build_gossip_payload(app: &GossipState, full_sync: bool) -> GossipPayload {
   let nodes = app.nodes();
   let diffs = if full_sync {
-    nodes
-      .iter()
-      .map(|entry| (entry.key().clone(), entry.value().clone()))
-      .collect()
+    nodes.iter()
   } else {
     let dirty_ids: Vec<NodeId> = {
       let dirty = app.dirty();
@@ -39,10 +36,10 @@ pub async fn build_gossip_payload(app: &GossipState, full_sync: bool) -> GossipP
       dirty.clear();
       ids
     };
-    let mut diffs = HashMap::new();
+    let mut diffs = Vec::new();
     for id in dirty_ids.iter() {
       if let Some(node_state) = nodes.get(id) {
-        diffs.insert(id.clone(), node_state.value().clone());
+        diffs.push((id.clone(), node_state.clone()));
       }
     }
     diffs
@@ -59,8 +56,9 @@ pub fn select_gossip_targets(app: &GossipState, count: usize) -> Vec<(NodeId, St
   let my_id = app.id();
   let targets: Vec<_> = nodes
     .iter()
-    .filter(|entry| entry.key() != my_id)
-    .map(|entry| (entry.key().clone(), entry.value().address().to_string()))
+    .into_iter()
+    .filter(|entry| entry.0 != *my_id)
+    .map(|entry| (entry.0, entry.1.address().to_string()))
     .collect();
   let mut rng = SmallRng::from_os_rng();
   targets.choose_multiple(&mut rng, count).cloned().collect()

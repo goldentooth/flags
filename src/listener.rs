@@ -11,7 +11,7 @@ use tokio_util::sync::CancellationToken;
 use tower::ServiceBuilder;
 use tower_http::{timeout::TimeoutLayer, trace::TraceLayer};
 
-use tracing::{debug, instrument, trace};
+use tracing::{debug, instrument};
 
 pub async fn gossip_listen(
   gossip_state: GossipState,
@@ -47,21 +47,8 @@ pub async fn gossip_handler(
 ) -> &'static str {
   let nodes = app.nodes();
   debug!("Received gossip from: {}", payload.from);
-
   for (key, incoming) in payload.diffs {
-    trace!("Processing state for: {}", key);
-
-    if let Some(existing) = nodes.get(&key) {
-      if incoming.last_seen() > existing.last_seen() {
-        drop(existing);
-        trace!("Updating state for: {}", key);
-        nodes.insert(key, incoming);
-      }
-    } else {
-      trace!("Adding new state for: {}", key);
-      nodes.insert(key, incoming);
-    }
+    nodes.insert(key, incoming);
   }
-
   "ok"
 }

@@ -10,6 +10,7 @@ use tracing::{info, instrument};
 mod args;
 mod browser;
 mod config;
+mod crdts;
 mod gossip;
 mod listener;
 mod log;
