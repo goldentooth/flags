@@ -84,6 +84,8 @@ async fn main() -> eyre::Result<()> {
         .connect_timeout(Duration::from_secs(1))
         .pool_idle_timeout(Duration::from_secs(1))
         .pool_max_idle_per_host(0)
+        .http2_keep_alive_interval(None)
+        .tcp_keepalive(None)
         .build()
         .expect("Failed to create HTTP client");
       async move {
@@ -94,13 +96,13 @@ async fn main() -> eyre::Result<()> {
     })
     .await;
 
+  let shutdown_clone = shutdown.clone();
   shutdown
     .spawn("ctrl_c", {
-      let shutdown = shutdown.clone();
       async move {
         signal::ctrl_c().await.expect("failed to listen for event");
         info!("Ctrl-C pressed, shutting down...");
-        shutdown.cancel();
+        shutdown_clone.cancel();
       }
     })
     .await;
