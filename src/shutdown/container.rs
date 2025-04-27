@@ -1,6 +1,8 @@
 use super::manager::ShutdownManager;
 use crate::gossip::GossipState;
+use crate::{browser, listener, register, whisperer};
 use derivative::Derivative;
+use futures::future::BoxFuture;
 use mdns_sd::{ServiceDaemon, ServiceInfo};
 use reqwest::Client;
 use tokio_util::sync::CancellationToken;
@@ -30,6 +32,49 @@ impl ShutdownContainer {
       domain,
       service_info,
       http_client,
+    }
+  }
+
+  pub async fn register_tasks(
+    &self,
+    shutdown: &ShutdownManager,
+    listener: tokio::net::TcpListener,
+  ) {
+    let tasks: Vec<(
+      &'static str,
+      Box<
+        dyn FnOnce(CancellationToken, ShutdownContainer) -> BoxFuture<'static, eyre::Result<()>>
+          + Send,
+      >,
+    )> = vec![
+      (
+        "browse_services",
+        Box::new(|cancel, container| {
+          Box::pin(async move { browser::browse_loop(&container, cancel).await })
+        }),
+      ),
+      (
+        "register_service",
+        Box::new(|cancel, container| {
+          Box::pin(async move { register::register_service(&container, cancel).await })
+        }),
+      ),
+      (
+        "gossip_listener",
+        Box::new(move |cancel, container| {
+          Box::pin(async move { listener::gossip_listen(&container, listener, cancel).await })
+        }),
+      ),
+      (
+        "gossip_whisper",
+        Box::new(|cancel, container| {
+          Box::pin(async move { whisperer::gossip_whisper(&container, cancel).await })
+        }),
+      ),
+    ];
+
+    for (name, task) in tasks {
+      self.spawn(shutdown, name, task).await;
     }
   }
 

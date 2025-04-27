@@ -49,49 +49,7 @@ async fn main() -> eyre::Result<()> {
     ShutdownContainer::new(gossip_state, service_daemon, domain, service_info, client)
   };
 
-  container
-    .spawn(
-      &shutdown,
-      "browse_services",
-      move |cancel_token, container| async move {
-        browser::browse_loop(
-          &container,
-          cancel_token,
-        )
-        .await
-      },
-    )
-    .await;
-
-  container
-    .spawn(
-      &shutdown,
-      "register_service",
-      move |cancel_token, container| async move {
-        register::register_service(&container, cancel_token).await
-      },
-    )
-    .await;
-
-  container
-    .spawn(
-      &shutdown,
-      "gossip_listener",
-      move |cancel_token, container| async move {
-        listener::gossip_listen(&container, listener, cancel_token).await
-      },
-    )
-    .await;
-
-  container
-    .spawn(
-      &shutdown,
-      "gossip_whisper",
-      move |cancel_token, container| async move {
-        whisperer::gossip_whisper(&container, cancel_token).await
-      },
-    )
-    .await;
+  container.register_tasks(&shutdown, listener).await;
 
   shutdown
     .spawn("ctrl_c", {
