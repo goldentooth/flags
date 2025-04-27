@@ -53,6 +53,7 @@ pub async fn gossip_handler(
 
     if let Some(existing) = nodes.get(&key) {
       if incoming.last_seen() > existing.last_seen() {
+        drop(existing);
         trace!("Updating state for: {}", key);
         nodes.insert(key, incoming);
       }
