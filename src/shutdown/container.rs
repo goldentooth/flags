@@ -1,9 +1,7 @@
-use super::manager::ShutdownManager;
-use crate::gossip::GossipState;
 use crate::{
-  listener,
+  gossip::{listener, state::GossipState, whisperer},
   mdns::{browser, register},
-  whisperer,
+  shutdown::manager::ShutdownManager,
 };
 use derivative::Derivative;
 use futures::future::BoxFuture;

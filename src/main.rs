@@ -6,12 +6,10 @@ use tracing::{info, instrument};
 mod crdts;
 mod gossip;
 mod init;
-mod listener;
 mod log;
 mod mdns;
 mod node;
 mod shutdown;
-mod whisperer;
 
 #[tokio::main]
 #[instrument]

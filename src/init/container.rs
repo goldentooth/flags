@@ -1,5 +1,5 @@
 use super::config::Config;
-use crate::gossip::GossipState;
+use crate::gossip::state::GossipState;
 use crate::shutdown::container::ShutdownContainer;
 use mdns_sd::{ServiceDaemon, ServiceInfo};
 use reqwest::ClientBuilder;

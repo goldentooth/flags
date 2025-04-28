@@ -1,4 +1,4 @@
-use crate::gossip::{GossipPayload, GossipState};
+use super::state::{GossipPayload, GossipState};
 use crate::shutdown::container::ShutdownContainer;
 use axum::{Json, extract::State};
 use axum::{

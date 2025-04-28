@@ -1,4 +1,4 @@
-use crate::gossip::GossipState;
+use crate::gossip::state::GossipState;
 use crate::node::{NodeId, NodeState};
 use crate::shutdown::container::ShutdownContainer;
 use mdns_sd::{IfKind, ServiceEvent, ServiceInfo};
