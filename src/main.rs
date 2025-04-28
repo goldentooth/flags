@@ -3,14 +3,13 @@ use shutdown::manager::ShutdownManager;
 use tokio::signal;
 use tracing::{info, instrument};
 
-mod browser;
 mod crdts;
 mod gossip;
 mod init;
 mod listener;
 mod log;
+mod mdns;
 mod node;
-mod register;
 mod shutdown;
 mod whisperer;
 

@@ -1,6 +1,10 @@
 use super::manager::ShutdownManager;
 use crate::gossip::GossipState;
-use crate::{browser, listener, register, whisperer};
+use crate::{
+  listener,
+  mdns::{browser, register},
+  whisperer,
+};
 use derivative::Derivative;
 use futures::future::BoxFuture;
 use mdns_sd::{ServiceDaemon, ServiceInfo};
