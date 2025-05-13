@@ -19,3 +19,5 @@ RUST_LOG=debug cargo run
 That launches a single node, but a mesh of one node isn't particularly interesting.
 
 If you launch a second, third, fourth, etc, then those nodes should discover each other and begin gossipping with one another. You won't see much of this unless you set the `RUST_LOG` environment variable as described above.
+
+Alternatively, you can run `./easy_cluster.sh x`, where `x` is some number of nodes you would like to run simultaneously in a self-configuring cluster, e.g. `32`.
