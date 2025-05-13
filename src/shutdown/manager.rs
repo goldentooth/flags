@@ -63,12 +63,12 @@ impl ShutdownManager {
 
   pub async fn shutdown(self) {
     tokio::select! {
-        _ = self.cancel_token.cancelled() => {
-            info!("Cancel token triggered.");
-        }
-        _ = tokio::signal::ctrl_c() => {
-            info!("Received Ctrl+C signal.");
-        }
+      _ = self.cancel_token.cancelled() => {
+        info!("Cancel token triggered.");
+      }
+      _ = tokio::signal::ctrl_c() => {
+        info!("Received Ctrl+C signal.");
+      }
     }
     let mut tasks = self.tasks.lock().await;
     let duration = Duration::from_secs(5);
