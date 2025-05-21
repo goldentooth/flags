@@ -3,7 +3,7 @@ use clap::Parser;
 use std::net::IpAddr;
 use tracing::{instrument, trace};
 
-const SERVICE_TYPE: &str = "_whispers._tcp.local.";
+const SERVICE_TYPE: &str = "_flags._tcp.local.";
 
 #[derive(Parser, Clone, Debug)]
 #[command(version, about, long_about = None)]
@@ -17,7 +17,7 @@ pub struct Args {
   /// Port of the node; normally picked by the OS
   #[arg(short, long, default_value_t = 0)]
   pub port: u16,
-  /// The service type (domain, like "_whispers._tcp.local.") to advertise
+  /// The service type (domain, like "_flags._tcp.local.") to advertise
   #[arg(short, long, default_value_t = String::from(SERVICE_TYPE))]
   pub domain: String,
 }

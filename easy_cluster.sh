@@ -12,10 +12,10 @@ fi;
 
 cd "$(dirname $0)";
 
-cargo build --release --bin whispers;
+cargo build --release --bin flags;
 
 for node_id in $(seq 1 "${num_nodes}"); do
-    (RUST_LOG=debug cargo run --release -- 2>&1 | sed -e "s/\\(.*\\)/whispers $node_id \\1/g") &
+    (RUST_LOG=debug cargo run --release -- 2>&1 | sed -e "s/\\(.*\\)/flags $node_id \\1/g") &
 done;
 
 trap 'kill $(jobs -p)' EXIT;

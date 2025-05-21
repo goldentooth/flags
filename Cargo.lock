@@ -504,6 +504,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
+name = "flags"
+version = "0.1.0"
+dependencies = [
+ "axum 0.8.3",
+ "clap",
+ "console-subscriber",
+ "dashmap",
+ "derivative",
+ "eyre",
+ "futures",
+ "local-ip-address",
+ "mdns-sd",
+ "rand 0.9.1",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "tower 0.5.2",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "flate2"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2400,32 +2426,6 @@ checksum = "33b6dd2ef9186f1f2072e409e99cd22a975331a6b3591b12c764e0e55c60d5d2"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "whispers"
-version = "0.1.0"
-dependencies = [
- "axum 0.8.3",
- "clap",
- "console-subscriber",
- "dashmap",
- "derivative",
- "eyre",
- "futures",
- "local-ip-address",
- "mdns-sd",
- "rand 0.9.1",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
- "tokio-util",
- "tower 0.5.2",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
 ]
 
 [[package]]
