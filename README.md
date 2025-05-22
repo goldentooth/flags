@@ -35,3 +35,12 @@ That launches a single node, but a mesh of one node isn't particularly interesti
 If you launch a second, third, fourth, etc, then those nodes should discover each other and begin gossipping with one another. You won't see much of this unless you set the `RUST_LOG` environment variable as described above.
 
 Alternatively, you can run `./easy_cluster.sh x`, where `x` is some number of nodes you would like to run simultaneously in a self-configuring cluster, e.g. `32`.
+
+## Cross-Compilation
+
+To cross-compile for a Raspberry Pi:
+
+```bash
+export DOCKER_DEFAULT_PLATFORM=linux/x86_64/v2
+cross build --release --target=aarch64-unknown-linux-gnu
+```
